@@ -47,7 +47,7 @@ def get_train_data(path="."):
         
             train_data = train_data.append( b , ignore_index=True)  # append current data (input + ouput) into a new dataset
         
-    return train_data
+    return train_data[input_params + ["times"] ] , train_data[ ["Y_"+j for j in alphabet]  ]
 
 
 
@@ -85,7 +85,7 @@ def get_test_data(path="."):
         
             test_data = test_data.append( b , ignore_index=True)  # append current data (input + ouput) into a new dataset
         
-    return test_data
+    return  test_data[input_params + ["times"] ] , test_data[ ["Y_"+j for j in alphabet]  ]
 
 
 

@@ -16,13 +16,12 @@ def Regressor():
 
         self.model.compile( optimizer=Adagrad() , loss="mse", metrics=["mape"])
 
-    def fit(self):
+    def fit(self,X,Y):
         
-        self.model.fit( train_data[input_params + ["times"]] , train_data[["target_"+i for i in alphabet]] , 
-                        epochs=500, batch_size=20, validation_split=0.3,shuffle=True,verbose=0)
+        self.model.fit( X , Y ,  epochs=500, batch_size=20, validation_split=0.3,shuffle=True,verbose=0)
 
-    def predict(self):        
-        res = self.model.predict( test_data[input_params + ["times"]]  )
+    def predict(self,X,Y):        
+        res = self.model.predict( X  )
 
         return res
     
