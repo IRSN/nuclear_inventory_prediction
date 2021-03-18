@@ -1,14 +1,34 @@
 import os, pickle, string
 import pandas as pd
+import numpy as np
 import rampwf as rw
+from sklearn.utils import shuffle
+from rampwf.score_types.base import BaseScoreType
 
 
 problem_title = 'Nuclear inventory of a nuclear reactor core in operation'
 
-_input_names  = list(string.ascii_uppercase)[:8]+ ["p%d"%(i) for i in range(1,6) ]+["times"]
 _target_names = ["Y_"+ j for j in list(string.ascii_uppercase) ]
 
-Regression = rw.prediction_types.make_regression( label_names=_target_names )
+Predictions = rw.prediction_types.make_regression( label_names=_target_names )
+workflow = rw.workflows.Regressor()
+
+
+class inventoryError_MSE(BaseScoreType):
+    is_lower_the_better = True
+    minimum = 0.0
+    maximum = float('inf')
+
+    def __init__(self, name='this error',precision=3):
+        self.name = name
+        self.precision = precision
+
+    def __call__(self, y_true, y_pred):        
+        mse = ( np.square(y_true - y_pred).sum(axis=1)  ).mean()
+        return mse
+#----
+
+score_types = [ inventoryError_MSE(name="inventoryError_MSE") ]
 
 
 def get_train_data(path="."):
@@ -46,9 +66,9 @@ def get_train_data(path="."):
             b.update(c)                               # merge dictionaries having input and output data 
         
             train_data = train_data.append( b , ignore_index=True)  # append current data (input + ouput) into a new dataset
-        
-    return train_data[input_params + ["times"] ] , train_data[ ["Y_"+j for j in alphabet]  ]
+    train_data = shuffle(train_data, random_state=57)  
 
+    return train_data[input_params + ["times"] ].to_numpy() , train_data[ ["Y_"+j for j in alphabet]  ].to_numpy()
 
 
 def get_test_data(path="."):
@@ -84,12 +104,13 @@ def get_test_data(path="."):
             b.update(c)                               # merge dictionaries having input and output data 
         
             test_data = test_data.append( b , ignore_index=True)  # append current data (input + ouput) into a new dataset
-        
-    return  test_data[input_params + ["times"] ] , test_data[ ["Y_"+j for j in alphabet]  ]
+    
+    test_data = shuffle(test_data, random_state=57)
+    
+    return  test_data[input_params + ["times"] ].to_numpy() , test_data[ ["Y_"+j for j in alphabet]  ].to_numpy()
 
 
 
 
-
-
-
+def get_cv(X, y):
+    return  [(range(0, X.shape[0] -200 ) , range(X.shape[0] -200 , X.shape[0]) ),]
