@@ -53,7 +53,7 @@ def get_train_data(path="."):
     temp = pd.DataFrame(np.repeat(train_dataset.loc[0][input_params].values, 81, axis=0), columns=input_params).reset_index(drop = True)
     train_data = pd.concat([temp, train_data.reset_index(drop=True)], axis = 1)
 
-    test_data = shuffle(train_data, random_state=57)
+    train_data = shuffle(train_data, random_state=57)
 
     return train_data[input_params + ["times"] ].to_numpy() , train_data[ ["Y_"+j for j in alphabet]  ].to_numpy()
 
