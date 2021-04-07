@@ -28,7 +28,23 @@ class inventoryError_MSE(BaseScoreType):
         return mse
 #----
 
-score_types = [ inventoryError_MSE(name="inventoryError_MSE") ]
+class inventoryError_MAE(BaseScoreType):
+    is_lower_the_better = True
+    minimum = 0.0
+    maximum = float('inf')
+
+    def __init__(self, name='this error',precision=3):
+        self.name = name
+        self.precision = precision
+
+    def __call__(self, y_true, y_pred):        
+        mape = (np.fabs(y_true - y_pred )).mean().sum()
+        return mape
+#----
+
+
+
+score_types = [ inventoryError_MSE(name="inventoryError_MSE"), inventoryError_MAE(name="inventoryError_MAE") ]
 
 
 def get_train_data(path="."):
