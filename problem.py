@@ -4,7 +4,8 @@ import numpy as np
 import rampwf as rw
 from sklearn.utils import shuffle
 from rampwf.score_types.base import BaseScoreType
-
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import ShuffleSplit
 
 problem_title = "Nuclear inventory of a nuclear reactor core in operation"
 
@@ -28,10 +29,7 @@ class inventoryError_MSE(BaseScoreType):
         return mse
 
 
-# ----
-
-
-class inventoryError_MAE(BaseScoreType):
+class inventoryError_MAPE(BaseScoreType):
     is_lower_the_better = True
     minimum = 0.0
     maximum = float("inf")
@@ -41,16 +39,13 @@ class inventoryError_MAE(BaseScoreType):
         self.precision = precision
 
     def __call__(self, y_true, y_pred):
-        mape = (np.fabs(y_true - y_pred)).mean().sum()
+        mape = (np.fabs(y_true - y_pred) / y_true).mean().sum()
         return mape
-
-
-# ----
 
 
 score_types = [
     inventoryError_MSE(name="inventoryError_MSE"),
-    inventoryError_MAE(name="inventoryError_MAE"),
+    inventoryError_MAPE(name="inventoryError_MAPE"),
 ]
 
 
@@ -62,21 +57,22 @@ def get_train_data(path="."):
     train_dataset = pickle.load(
         open(os.path.join(path, "data", "train_data_python3.pickle"), "rb")
     )
-
-    train_dataset = train_dataset / train_dataset.max()  # normalize data
+    max_train_data = train_dataset.max()
+    train_dataset_norm = train_dataset / max_train_data  # normalize data
 
     # Isotopes are named from A to Z
     alphabet = list(string.ascii_uppercase)
 
     # At T=0 only isotopes from A to H are != 0. Those are the input parameters
     # The input parameter space is composed of those initial compositions
-    input_params = alphabet[:8] + ["p%d" % (i) for i in range(1, 6)]
+    input_params = alphabet[0:8] + ["p1", "p2", "p3", "p4", "p5"]
 
-    train_data = train_dataset[alphabet].add_prefix("Y_")
-    train_data["times"] = train_dataset["times"]
+    train_data = train_dataset_norm[alphabet].add_prefix("Y_")
+    train_data["times"] = train_dataset_norm["times"]
+    train_data = train_data[train_data["times"] > 0.0]
 
     temp = pd.DataFrame(
-        np.repeat(train_dataset.loc[0][input_params].values, 81, axis=0),
+        np.repeat(train_dataset_norm.loc[0][input_params].values, 80, axis=0),
         columns=input_params,
     ).reset_index(drop=True)
     train_data = pd.concat([temp, train_data.reset_index(drop=True)], axis=1)
@@ -108,9 +104,10 @@ def get_test_data(path="."):
 
     test_data = test_dataset[alphabet].add_prefix("Y_")
     test_data["times"] = test_dataset["times"]
+    test_data = test_data[test_data["times"] > 0.0]
 
     temp = pd.DataFrame(
-        np.repeat(test_dataset.loc[0][input_params].values, 81, axis=0),
+        np.repeat(test_dataset.loc[0][input_params].values, 80, axis=0),
         columns=input_params,
     ).reset_index(drop=True)
     test_data = pd.concat([temp, test_data.reset_index(drop=True)], axis=1)
@@ -124,6 +121,5 @@ def get_test_data(path="."):
 
 
 def get_cv(X, y):
-    return [
-        (range(0, X.shape[0] - 200), range(X.shape[0] - 200, X.shape[0])),
-    ]
+    cv = ShuffleSplit(n_splits=5, random_state=57)
+    return cv.split(X, y)

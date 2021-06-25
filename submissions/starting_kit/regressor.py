@@ -1,23 +1,20 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adagrad
+from sklearn.neural_network import MLPRegressor
 from sklearn.base import BaseEstimator
 
 
 class Regressor(BaseEstimator):
     def __init__(self):
-        self.reg = Sequential()
-        self.reg.add(Dense(100, activation="relu", input_shape=(14,)))
-        self.reg.add(Dense(100, activation="relu"))
-        self.reg.add(Dense(100, activation="relu"))
-        self.reg.add(Dense(100, activation="relu"))
-        self.reg.add(Dense(26))
-
-        self.reg.compile(optimizer=Adagrad(), loss="mape", metrics=["mape"])
+        self.model = MLPRegressor(
+            solver="adam",
+            hidden_layer_sizes=(100, 100, 100),
+            max_iter=300,
+            batch_size=100,
+            random_state=57,
+        )
 
     def fit(self, X, Y):
-        self.reg.fit(X, Y, epochs=500, batch_size=30, verbose=0)
+        self.model.fit(X, Y)
 
     def predict(self, X):
-        res = self.reg.predict(X)
+        res = self.model.predict(X)
         return res
