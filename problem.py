@@ -4,7 +4,6 @@ import numpy as np
 import rampwf as rw
 from sklearn.utils import shuffle
 from rampwf.score_types.base import BaseScoreType
-from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import ShuffleSplit
 
 problem_title = "Nuclear inventory of a nuclear reactor core in operation"
@@ -15,12 +14,12 @@ Predictions = rw.prediction_types.make_regression(label_names=_target_names)
 workflow = rw.workflows.Regressor()
 
 
-class inventoryError_MSE(BaseScoreType):
+class MSE(BaseScoreType):
     is_lower_the_better = True
     minimum = 0.0
     maximum = float("inf")
 
-    def __init__(self, name="this error", precision=3):
+    def __init__(self, name="MSE", precision=3):
         self.name = name
         self.precision = precision
 
@@ -29,12 +28,12 @@ class inventoryError_MSE(BaseScoreType):
         return mse
 
 
-class inventoryError_MAPE(BaseScoreType):
+class MAPE(BaseScoreType):
     is_lower_the_better = True
     minimum = 0.0
     maximum = float("inf")
 
-    def __init__(self, name="this error", precision=3):
+    def __init__(self, name="MAPE", precision=3):
         self.name = name
         self.precision = precision
 
@@ -44,80 +43,50 @@ class inventoryError_MAPE(BaseScoreType):
 
 
 score_types = [
-    inventoryError_MSE(name="inventoryError_MSE"),
-    inventoryError_MAPE(name="inventoryError_MAPE"),
+    MSE(name="MSE"),
+    MAPE(name="MAPE"),
 ]
 
 
-def get_train_data(path="."):
-
+def _get_data(path=".", split="train"):
     # load pre-prepared dataset aggregating all of the different input data
-    # ( for the training dataset, these are composed of 920 different simulation of an operating reactor )
-    # train_dataset = pickle.load( open( "./data/train_data_python3.pickle", "rb") )
-    train_dataset = pickle.load(
-        open(os.path.join(path, "data", "train_data_python3.pickle"), "rb")
+    # ( for the training dataset, these are composed of 920 different
+    # simulation of an operating reactor )
+    dataset = pickle.load(
+        open(os.path.join(path, "data", f"{split}_data_python3.pickle"), "rb")
     )
-    max_train_data = train_dataset.max()
-    train_dataset_norm = train_dataset / max_train_data  # normalize data
+    dataset_norm = dataset / dataset.max()  # normalize data
 
     # Isotopes are named from A to Z
     alphabet = list(string.ascii_uppercase)
 
     # At T=0 only isotopes from A to H are != 0. Those are the input parameters
     # The input parameter space is composed of those initial compositions
-    input_params = alphabet[0:8] + ["p1", "p2", "p3", "p4", "p5"]
+    input_params = alphabet[:8] + ["p1", "p2", "p3", "p4", "p5"]
 
-    train_data = train_dataset_norm[alphabet].add_prefix("Y_")
-    train_data["times"] = train_dataset_norm["times"]
-    train_data = train_data[train_data["times"] > 0.0]
+    data = dataset_norm[alphabet].add_prefix("Y_")
+    data["times"] = dataset_norm["times"]
+    data = data[data["times"] > 0.0]
 
     temp = pd.DataFrame(
-        np.repeat(train_dataset_norm.loc[0][input_params].values, 80, axis=0),
+        np.repeat(dataset_norm.loc[0][input_params].values, 80, axis=0),
         columns=input_params,
     ).reset_index(drop=True)
-    train_data = pd.concat([temp, train_data.reset_index(drop=True)], axis=1)
+    data = pd.concat([temp, data.reset_index(drop=True)], axis=1)
 
-    train_data = shuffle(train_data, random_state=57)
+    data = shuffle(data, random_state=57)
 
-    return (
-        train_data[input_params + ["times"]].to_numpy(),
-        train_data[["Y_" + j for j in alphabet]].to_numpy(),
-    )
+    X = data[input_params + ["times"]].to_numpy()
+    Y = data[["Y_" + j for j in alphabet]].to_numpy()
+    return X, Y
+
+
+def get_train_data(path="."):
+    return _get_data(path, "train")
 
 
 def get_test_data(path="."):
-
-    # load pre-prepared dataset aggregating all of the different input data
-    # ( for the testing dataset, these are composed of 200 different simulation of an operating reactor )
-    test_dataset = pickle.load(
-        open(os.path.join(path, "data", "test_data_python3.pickle"), "rb")
-    )
-
-    test_dataset = test_dataset / test_dataset.max()  # normalize data
-
-    # Isotopes are named from A to Z
-    alphabet = list(string.ascii_uppercase)
-
-    # At T=0 only isotopes from A to H are != 0. Those are the input parameters
-    # The input parameter space is composed of those initial compositions
-    input_params = alphabet[:8] + ["p%d" % (i) for i in range(1, 6)]
-
-    test_data = test_dataset[alphabet].add_prefix("Y_")
-    test_data["times"] = test_dataset["times"]
-    test_data = test_data[test_data["times"] > 0.0]
-
-    temp = pd.DataFrame(
-        np.repeat(test_dataset.loc[0][input_params].values, 80, axis=0),
-        columns=input_params,
-    ).reset_index(drop=True)
-    test_data = pd.concat([temp, test_data.reset_index(drop=True)], axis=1)
-
-    test_data = shuffle(test_data, random_state=57)
-
-    return (
-        test_data[input_params + ["times"]].to_numpy(),
-        test_data[["Y_" + j for j in alphabet]].to_numpy(),
-    )
+    return _get_data(path, "test")
 
 
 def get_cv(X, y):
