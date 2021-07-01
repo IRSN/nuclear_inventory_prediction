@@ -55,7 +55,6 @@ def _get_data(path=".", split="train"):
     dataset = pickle.load(
         open(os.path.join(path, "data", f"{split}_data_python3.pickle"), "rb")
     )
-    dataset_norm = dataset / dataset.max()  # normalize data
 
     # Isotopes are named from A to Z
     alphabet = list(string.ascii_uppercase)
