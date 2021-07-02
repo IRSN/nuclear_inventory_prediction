@@ -68,8 +68,7 @@ def _get_data(path=".", split="train"):
     data = data[data["times"] > 0.0]
 
     temp = pd.DataFrame(
-        np.repeat(dataset.loc[0][input_params].values, 80, axis=0),
-        columns=input_params
+        np.repeat(dataset.loc[0][input_params].values, 80, axis=0), columns=input_params
     ).reset_index(drop=True)
     data = pd.concat([temp, data.reset_index(drop=True)], axis=1)
 
